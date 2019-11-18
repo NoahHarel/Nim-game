@@ -1,10 +1,3 @@
-/*
- * Parser.c
- *
- *  Created on: May 21, 2019
- *      Author: Itamar
- */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include "Game.h"
