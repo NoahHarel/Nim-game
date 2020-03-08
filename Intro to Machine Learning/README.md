@@ -1,4 +1,4 @@
-he course is a basic introduction to machine learning, including:
+The course is a basic introduction to machine learning, including:
 
 Supervised learning (PAC learning, VC dimension, perceptron, SVM, stochastic gradient descent, deep learning, boosting, decision trees)
 Unsupervised learning (principal component analysls, clustering, EM algorithm)
