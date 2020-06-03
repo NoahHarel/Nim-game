@@ -1,0 +1,89 @@
+# Created by Lior Sukman and Noah Harel
+
+import json
+import csv
+import os
+import pandas as pd
+import random
+
+# create a target file name according to the input path and parameters:
+# incorporate heads from json file or one of the baselines: use random heads or same word heads.
+def get_target_path(input_path, is_random_heads, same_word_heads):
+    if is_random_heads:
+        target_path = os.path.splitext(input_path)[0] + '_rnd_heads.tsv'
+    elif same_word_heads:
+        target_path = os.path.splitext(input_path)[0] + '_same_word_heads.tsv'
+    else:
+        target_path = os.path.splitext(input_path)[0] + '_heads.tsv'
+    return target_path
+
+
+# check each line for parity on the sentence part:
+# if every word gets a head the sentence should have an even length.
+def check_parity(file_path):
+    with open(file_path, encoding='utf-8') as tsvfile:
+        tsvreader = csv.reader(tsvfile, delimiter = '\t')
+        for line in tsvreader:
+            if(len(line[:1][0].split())%2!=0):
+                print(line[:-1][0])
+                raise AssertionError
+
+
+# creates a TSV file made of the original sentence, with each word's head immediately following it,
+# and leave the target sentence as is:
+# sentence: word1 head(word1) word2 head(word2)... etc. \t target sentence (as in the original TSV)
+# is_random_heads: generate random ones heads
+# same_word_heads: use a word as its own head
+# prints out names of files it succeeds to make, and checks them for even sentence lengths
+def source_head_target(json_path, tsv_path, is_random_heads, same_word_heads):
+    target = get_target_path(tsv_path, is_random_heads, same_word_heads)
+    with open(target, 'w', encoding='utf-8') as fd:
+        df = pd.read_csv(tsv_path, sep = '\t', header = None)
+        with open(json_path, 'r') as j:
+            json_data = [json.loads(line) for line in j]
+            for i in range(len(json_data)):
+                # avoid problem sentence with quotes in the beginning
+                if i!=16298:
+                    source_and_heads=[]
+                    sentence_len = len(json_data[i]['predicted_heads'])
+                    if is_random_heads:
+                        rnd_indices = random.sample(range(sentence_len+1),sentence_len)
+                    for j in range(sentence_len):
+                        head_index = rnd_indices[j] if is_random_heads else json_data[i]['predicted_heads'][j]
+                        head_word = json_data[i]['words'][head_index - 1] if head_index > 0 else '@@ROOT@@'
+                        source_and_heads.append(json_data[i]['words'][j])
+                        if same_word_heads:
+                            source_and_heads.append(json_data[i]['words'][j])
+                        else:
+                            source_and_heads.append(head_word)
+                    df.loc[i][0] = ' '.join(source_and_heads)
+                    output = df.loc[i][0] + '\t' + df.loc[i][1] +'\n'
+                    fd.write(output)
+    print(target)
+    check_parity(target)
+
+
+
+# example run
+# can be run with and train and dev files
+# json file of heads from the biaffine parser
+# tsv files from the BREAK dataset
+if __name__ == "__main__":
+
+    json_train = 'train_high_40_results.json'
+    tsv_train = 'train.tsv'
+
+    json_dev = 'dev_high_40_results.json'
+    tsv_dev = 'dev.tsv'
+
+    # get actual heads from json file
+    source_head_target(json_train, tsv_train, False, False)
+    source_head_target(json_dev, tsv_dev, False, False)
+
+    # get random heads
+    source_head_target(json_train, tsv_train, True, False)
+    source_head_target(json_dev, tsv_dev, True, False)
+
+    # get same word heads
+    source_head_target(json_train, tsv_train, False, True)
+    source_head_target(json_dev, tsv_dev, False, True)
